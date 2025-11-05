@@ -2,6 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import { sequelize, testConnection } from "./src/db.js";
 import Routes from "./src/routes/Routes.js";
+// Importar modelos para que Sequelize los sincronice
+import "./src/models/Appointment.js";
 
 dotenv.config();
 

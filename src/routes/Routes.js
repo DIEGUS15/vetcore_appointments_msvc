@@ -1,6 +1,15 @@
 import { Router } from "express";
+import { createAppointment } from "../controllers/appointmentController.js";
+import { verifyToken } from "../middlewares/authMiddleware.js";
 
 const router = Router();
+
+/**
+ * @route   POST /api/appointments
+ * @desc    Registrar una nueva cita
+ * @access  Private (cliente autenticado)
+ */
+router.post("/", verifyToken, createAppointment);
 
 /**
  * @route   GET /api/appointments

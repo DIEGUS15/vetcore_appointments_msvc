@@ -13,7 +13,7 @@ services:
       MYSQL_USER: vetcore_appointments_user
       MYSQL_PASSWORD: vetcore_pass
     ports:
-      - "3306:3306"
+      - "3309:3306"
     volumes:
       - mysql_appointments_data_dev:/var/lib/mysql
     networks:
