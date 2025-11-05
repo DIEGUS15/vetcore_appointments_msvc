@@ -1,0 +1,77 @@
+# Docker Compose para desarrollo independiente del Appointments Service
+# Uso: docker-compose up
+
+services:
+  # Base de datos MySQL para Appointments Service
+  mysql-appointments-db:
+    image: mysql:8.0
+    container_name: vetcore_mysql_appointments_dev
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: vetcore_appointments_db
+      MYSQL_USER: vetcore_appointments_user
+      MYSQL_PASSWORD: vetcore_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_appointments_data_dev:/var/lib/mysql
+    networks:
+      - appointments-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Servicio de Citas
+  appointments-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vetcore_appointments_dev
+    restart: always
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      DB_HOST: mysql-appointments-db
+      DB_PORT: 3306
+      DB_NAME: vetcore_appointments_db
+      DB_USER: vetcore_appointments_user
+      DB_PASSWORD: vetcore_pass
+      JWT_SECRET: your_super_secret_jwt_key_change_this_in_production
+      JWT_EXPIRES_IN: 24h
+      AUTH_SERVICE_URL: http://localhost:3000
+      PATIENTS_SERVICE_URL: http://localhost:3001
+      NODE_ENV: development
+    depends_on:
+      mysql-appointments-db:
+        condition: service_healthy
+    networks:
+      - appointments-network
+    # Descomentar para hot-reload en desarrollo
+    # volumes:
+    #   - ./src:/app/src
+    #   - /app/node_modules
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3003/",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  appointments-network:
+    driver: bridge
+
+volumes:
+  mysql_appointments_data_dev:
+    driver: local
