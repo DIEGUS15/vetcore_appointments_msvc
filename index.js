@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import { sequelize, testConnection } from "./src/db.js";
 import Routes from "./src/routes/Routes.js";
+import { connectRabbitMQ, closeConnection } from "./src/config/rabbitmq.js";
 // Importar modelos para que Sequelize los sincronice
 import "./src/models/Appointment.js";
 
@@ -32,6 +33,10 @@ const startServer = async () => {
     await sequelize.sync({ alter: true });
     console.log("Modelos sincronizados con la base de datos");
 
+    // Conectar RabbitMQ
+    await connectRabbitMQ();
+    console.log("RabbitMQ conectado exitosamente");
+
     // Iniciar servidor
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en http://localhost:${PORT}`);
@@ -41,5 +46,18 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Manejar cierre graceful
+process.on("SIGINT", async () => {
+  console.log("\nCerrando servidor...");
+  await closeConnection();
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("\nCerrando servidor...");
+  await closeConnection();
+  process.exit(0);
+});
 
 startServer();

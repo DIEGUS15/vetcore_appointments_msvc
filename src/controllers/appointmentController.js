@@ -1,6 +1,7 @@
 import Appointment from "../models/Appointment.js";
-import { verifyPetOwnership } from "../services/patientsService.js";
-import { verifyVeterinarianRole } from "../services/authService.js";
+import { verifyPetOwnership, getPetById } from "../services/patientsService.js";
+import { verifyVeterinarianRole, getUserById } from "../services/authService.js";
+import { publishEvent } from "../config/rabbitmq.js";
 
 /**
  * Registra una nueva cita en el sistema
@@ -111,6 +112,44 @@ export const createAppointment = async (req, res) => {
       status: "pendiente", // Estado inicial
       isActive: true,
     });
+
+    // Obtener información adicional para el correo
+    try {
+      // Obtener datos de la mascota
+      const petData = await getPetById(petId, token);
+      const petName = petData?.data?.petName || "Mascota desconocida";
+
+      // Obtener datos del veterinario
+      const veterinarianData = await getUserById(veterinarianId, token);
+      const veterinarianName = veterinarianData?.data?.user?.fullname || "Veterinario desconocido";
+      const veterinarianEmail = veterinarianData?.data?.user?.email;
+
+      // Obtener datos del cliente (ya los tenemos en req.user, pero obtenemos el nombre completo)
+      const clientData = await getUserById(clientId, token);
+      const clientName = clientData?.data?.user?.fullname || req.user?.fullname || "Cliente desconocido";
+
+      // Publicar evento para envío de correos
+      if (veterinarianEmail && clientEmail) {
+        await publishEvent("appointment.created", {
+          appointmentId: newAppointment.appointmentId,
+          fecha: newAppointment.fecha,
+          hora: newAppointment.hora,
+          motivo: newAppointment.motivo,
+          petId: newAppointment.petId,
+          petName,
+          clientId: newAppointment.clientId,
+          clientName,
+          clientEmail,
+          veterinarianId: newAppointment.veterinarianId,
+          veterinarianName,
+          veterinarianEmail,
+        });
+        console.log("Evento appointment.created publicado exitosamente");
+      }
+    } catch (eventError) {
+      // No fallar la creación de la cita si falla el envío del evento
+      console.error("Error al publicar evento de cita creada:", eventError);
+    }
 
     return res.status(201).json({
       success: true,
