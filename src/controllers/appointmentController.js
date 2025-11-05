@@ -1,4 +1,6 @@
 import Appointment from "../models/Appointment.js";
+import { verifyPetOwnership } from "../services/patientsService.js";
+import { verifyVeterinarianRole } from "../services/authService.js";
 
 /**
  * Registra una nueva cita en el sistema
@@ -6,21 +8,22 @@ import Appointment from "../models/Appointment.js";
  */
 export const createAppointment = async (req, res) => {
   try {
-    const { fecha, hora, motivo, petId } = req.body;
+    const { fecha, hora, motivo, petId, veterinarianId } = req.body;
 
     // Validar que todos los campos requeridos estén presentes
-    if (!fecha || !hora || !motivo || !petId) {
+    if (!fecha || !hora || !motivo || !petId || !veterinarianId) {
       return res.status(400).json({
         success: false,
-        message: "Todos los campos son obligatorios: fecha, hora, motivo, petId",
+        message: "Todos los campos son obligatorios: fecha, hora, motivo, petId, veterinarianId",
       });
     }
 
-    // Obtener el ID del cliente del usuario autenticado
+    // Obtener el ID y email del cliente del usuario autenticado
     // El middleware verifyToken debe agregar req.user con los datos del usuario
     const clientId = req.user?.id;
+    const clientEmail = req.user?.email;
 
-    if (!clientId) {
+    if (!clientId || !clientEmail) {
       return res.status(401).json({
         success: false,
         message: "No se pudo identificar al usuario autenticado",
@@ -57,10 +60,45 @@ export const createAppointment = async (req, res) => {
       });
     }
 
-    // TODO: Aquí podrías agregar validaciones adicionales:
-    // - Verificar que la mascota (petId) exista en el servicio de Patients
-    // - Verificar que la mascota pertenezca al cliente
-    // - Verificar que no haya conflictos de horario
+    // Verificar que la mascota exista y pertenezca al cliente
+    const token = req.headers.authorization; // Pasar el token completo
+
+    try {
+      const isPetOwner = await verifyPetOwnership(petId, clientEmail, token);
+
+      if (!isPetOwner) {
+        return res.status(403).json({
+          success: false,
+          message: "La mascota no existe o no pertenece a este cliente",
+        });
+      }
+    } catch (error) {
+      console.error("Error verificando propiedad de la mascota:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al verificar la mascota",
+        error: error.message,
+      });
+    }
+
+    // Verificar que el veterinario existe y tiene el rol correcto
+    try {
+      const isVeterinarian = await verifyVeterinarianRole(veterinarianId, token);
+
+      if (!isVeterinarian) {
+        return res.status(400).json({
+          success: false,
+          message: "El veterinario no existe o no tiene el rol de veterinario",
+        });
+      }
+    } catch (error) {
+      console.error("Error verificando veterinario:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al verificar el veterinario",
+        error: error.message,
+      });
+    }
 
     // Crear la cita
     const newAppointment = await Appointment.create({
@@ -69,6 +107,7 @@ export const createAppointment = async (req, res) => {
       motivo,
       petId,
       clientId,
+      veterinarianId,
       status: "pendiente", // Estado inicial
       isActive: true,
     });
@@ -83,6 +122,7 @@ export const createAppointment = async (req, res) => {
         motivo: newAppointment.motivo,
         petId: newAppointment.petId,
         clientId: newAppointment.clientId,
+        veterinarianId: newAppointment.veterinarianId,
         status: newAppointment.status,
         createdAt: newAppointment.createdAt,
       },

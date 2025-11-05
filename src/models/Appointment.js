@@ -70,6 +70,20 @@ const Appointment = sequelize.define(
         },
       },
     },
+    veterinarianId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "veterinarian_id",
+      comment: "ID del veterinario asignado a la cita",
+      validate: {
+        notNull: {
+          msg: "El ID del veterinario es obligatorio",
+        },
+        isInt: {
+          msg: "El ID del veterinario debe ser un número entero",
+        },
+      },
+    },
     status: {
       type: DataTypes.ENUM("pendiente", "confirmada", "cancelada", "completada"),
       defaultValue: "pendiente",
