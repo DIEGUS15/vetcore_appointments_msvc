@@ -1,8 +1,15 @@
 import { Router } from "express";
-import { createAppointment } from "../controllers/appointmentController.js";
+import { createAppointment, getClientAppointments } from "../controllers/appointmentController.js";
 import { verifyToken } from "../middlewares/authMiddleware.js";
 
 const router = Router();
+
+/**
+ * @route   GET /api/appointments
+ * @desc    Obtener todas las citas del cliente autenticado
+ * @access  Private (cliente autenticado)
+ */
+router.get("/", verifyToken, getClientAppointments);
 
 /**
  * @route   POST /api/appointments
@@ -10,19 +17,6 @@ const router = Router();
  * @access  Private (cliente autenticado)
  */
 router.post("/", verifyToken, createAppointment);
-
-/**
- * @route   GET /api/appointments
- * @desc    Get all appointments (placeholder)
- * @access  Public (temporal - agregar auth después)
- */
-router.get("/", (req, res) => {
-  res.json({
-    success: true,
-    message: "Appointments service is running",
-    data: [],
-  });
-});
 
 /**
  * @route   GET /api/appointments/health

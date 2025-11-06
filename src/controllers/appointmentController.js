@@ -185,3 +185,111 @@ export const createAppointment = async (req, res) => {
     });
   }
 };
+
+/**
+ * Obtiene todas las citas de un cliente autenticado
+ * @route GET /api/appointments
+ */
+export const getClientAppointments = async (req, res) => {
+  try {
+    // Obtener el ID del cliente del usuario autenticado
+    const clientId = req.user?.id;
+
+    if (!clientId) {
+      return res.status(401).json({
+        success: false,
+        message: "No se pudo identificar al usuario autenticado",
+      });
+    }
+
+    // Obtener parámetros de consulta opcionales
+    const { status, includeInactive } = req.query;
+
+    // Construir el objeto de filtros
+    const whereClause = {
+      clientId: clientId,
+    };
+
+    // Filtrar por estado si se proporciona
+    if (status) {
+      whereClause.status = status;
+    }
+
+    // Por defecto, solo mostrar citas activas
+    if (includeInactive !== "true") {
+      whereClause.isActive = true;
+    }
+
+    // Obtener las citas del cliente
+    const appointments = await Appointment.findAll({
+      where: whereClause,
+      order: [
+        ["fecha", "DESC"],
+        ["hora", "DESC"],
+      ],
+    });
+
+    // Obtener información adicional de cada cita (mascota y veterinario)
+    const token = req.headers.authorization;
+    const appointmentsWithDetails = await Promise.all(
+      appointments.map(async (appointment) => {
+        try {
+          // Obtener datos de la mascota
+          const petData = await getPetById(appointment.petId, token);
+          const petName = petData?.data?.petName || "Mascota no encontrada";
+
+          // Obtener datos del veterinario
+          const veterinarianData = await getUserById(appointment.veterinarianId, token);
+          const veterinarianName = veterinarianData?.data?.user?.fullname || "Veterinario no encontrado";
+
+          return {
+            appointmentId: appointment.appointmentId,
+            fecha: appointment.fecha,
+            hora: appointment.hora,
+            motivo: appointment.motivo,
+            status: appointment.status,
+            isActive: appointment.isActive,
+            petId: appointment.petId,
+            petName,
+            veterinarianId: appointment.veterinarianId,
+            veterinarianName,
+            createdAt: appointment.createdAt,
+            updatedAt: appointment.updatedAt,
+          };
+        } catch (error) {
+          console.error(`Error obteniendo detalles de la cita ${appointment.appointmentId}:`, error);
+          // Si falla la obtención de detalles, devolver la cita sin detalles adicionales
+          return {
+            appointmentId: appointment.appointmentId,
+            fecha: appointment.fecha,
+            hora: appointment.hora,
+            motivo: appointment.motivo,
+            status: appointment.status,
+            isActive: appointment.isActive,
+            petId: appointment.petId,
+            petName: "Error al cargar",
+            veterinarianId: appointment.veterinarianId,
+            veterinarianName: "Error al cargar",
+            createdAt: appointment.createdAt,
+            updatedAt: appointment.updatedAt,
+          };
+        }
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Citas obtenidas exitosamente",
+      count: appointmentsWithDetails.length,
+      data: appointmentsWithDetails,
+    });
+  } catch (error) {
+    console.error("Error al obtener las citas del cliente:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Error al obtener las citas",
+      error: error.message,
+    });
+  }
+};
