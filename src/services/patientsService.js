@@ -3,20 +3,11 @@ import axios from "axios";
 const PATIENTS_SERVICE_URL =
   process.env.PATIENTS_SERVICE_URL || "http://localhost:3001";
 
-/**
- * Cliente HTTP para comunicarse con el Patients Service
- */
 const patientsServiceClient = axios.create({
   baseURL: PATIENTS_SERVICE_URL,
   timeout: 5000, // 5 segundos de timeout
 });
 
-/**
- * Obtiene información de una mascota por su ID
- * @param {number} petId - ID de la mascota
- * @param {string} token - Token JWT del usuario autenticado
- * @returns {Promise<Object>} Información de la mascota
- */
 export const getPetById = async (petId, token) => {
   try {
     const response = await patientsServiceClient.get(
@@ -50,13 +41,6 @@ export const getPetById = async (petId, token) => {
   }
 };
 
-/**
- * Verifica que una mascota pertenezca a un cliente específico
- * @param {number} petId - ID de la mascota
- * @param {string} ownerEmail - Email del dueño de la mascota
- * @param {string} token - Token JWT del usuario autenticado
- * @returns {Promise<boolean>} True si la mascota pertenece al cliente
- */
 export const verifyPetOwnership = async (petId, ownerEmail, token) => {
   try {
     const petData = await getPetById(petId, token);

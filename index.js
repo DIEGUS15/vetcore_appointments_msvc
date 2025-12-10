@@ -3,8 +3,8 @@ import dotenv from "dotenv";
 import { sequelize, testConnection } from "./src/db.js";
 import Routes from "./src/routes/Routes.js";
 import { connectRabbitMQ, closeConnection } from "./src/config/rabbitmq.js";
-// Importar modelos para que Sequelize los sincronice
-import "./src/models/Appointment.js";
+// Importar modelos y asociaciones para que Sequelize los sincronice
+import "./src/models/associations.js";
 
 dotenv.config();
 
@@ -33,9 +33,14 @@ const startServer = async () => {
     await sequelize.sync({ alter: true });
     console.log("Modelos sincronizados con la base de datos");
 
-    // Conectar RabbitMQ
-    await connectRabbitMQ();
-    console.log("RabbitMQ conectado exitosamente");
+    // Conectar RabbitMQ (no crítico - el servicio puede funcionar sin él)
+    try {
+      await connectRabbitMQ();
+      console.log("RabbitMQ conectado exitosamente");
+    } catch (error) {
+      console.warn("⚠️  Warning: RabbitMQ connection failed. Service will continue without event publishing.");
+      console.warn("RabbitMQ error:", error.message);
+    }
 
     // Iniciar servidor
     app.listen(PORT, () => {

@@ -3,20 +3,11 @@ import axios from "axios";
 const AUTH_SERVICE_URL =
   process.env.AUTH_SERVICE_URL || "http://localhost:3000";
 
-/**
- * Cliente HTTP para comunicarse con el Auth Service
- */
 const authServiceClient = axios.create({
   baseURL: AUTH_SERVICE_URL,
   timeout: 5000, // 5 segundos de timeout
 });
 
-/**
- * Obtiene información de un usuario por su ID
- * @param {number} userId - ID del usuario
- * @param {string} token - Token JWT del usuario autenticado
- * @returns {Promise<Object|null>} Información del usuario o null si no existe
- */
 export const getUserById = async (userId, token) => {
   try {
     const response = await authServiceClient.get(`/api/users/${userId}`, {
@@ -47,12 +38,6 @@ export const getUserById = async (userId, token) => {
   }
 };
 
-/**
- * Verifica que un usuario tenga el rol de veterinario
- * @param {number} veterinarianId - ID del veterinario
- * @param {string} token - Token JWT del usuario autenticado
- * @returns {Promise<boolean>} True si el usuario es veterinario
- */
 export const verifyVeterinarianRole = async (veterinarianId, token) => {
   try {
     const userData = await getUserById(veterinarianId, token);
@@ -70,11 +55,6 @@ export const verifyVeterinarianRole = async (veterinarianId, token) => {
   }
 };
 
-/**
- * Obtiene la lista de veterinarios disponibles
- * @param {string} token - Token JWT del usuario autenticado
- * @returns {Promise<Array>} Lista de veterinarios
- */
 export const getVeterinarians = async (token) => {
   try {
     const response = await authServiceClient.get("/api/users", {
@@ -90,7 +70,10 @@ export const getVeterinarians = async (token) => {
 
     return [];
   } catch (error) {
-    console.error("Error fetching veterinarians from Auth Service:", error.message);
+    console.error(
+      "Error fetching veterinarians from Auth Service:",
+      error.message
+    );
     throw new Error("Could not fetch veterinarians from Auth Service");
   }
 };

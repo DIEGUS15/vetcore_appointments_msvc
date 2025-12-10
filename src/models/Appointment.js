@@ -90,6 +90,21 @@ const Appointment = sequelize.define(
       allowNull: false,
       comment: "Estado de la cita",
     },
+    procedimiento: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Procedimiento realizado durante la atención",
+    },
+    diagnostico: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Diagnóstico del veterinario",
+    },
+    indicaciones: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Indicaciones y recomendaciones a seguir",
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
