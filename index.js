@@ -11,9 +11,22 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3003;
 
-// Middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middlewares - NO aplicar JSON parser a rutas de PDF
+app.use((req, res, next) => {
+  // Excluir rutas de PDF del middleware JSON
+  if (req.path.includes('/pdf') || req.path.endsWith('/download')) {
+    return next();
+  }
+  express.json()(req, res, next);
+});
+
+app.use((req, res, next) => {
+  // Excluir rutas de PDF del middleware urlencoded
+  if (req.path.includes('/pdf') || req.path.endsWith('/download')) {
+    return next();
+  }
+  express.urlencoded({ extended: true })(req, res, next);
+});
 
 // Rutas
 app.use("/api/appointments", Routes);

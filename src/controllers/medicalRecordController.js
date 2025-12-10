@@ -577,13 +577,16 @@ export const generateMedicalRecordPDFEndpoint = async (req, res) => {
     }
 
     // Obtener información de la mascota
-    const petData = await getPetById(medicalRecord.petId);
-    if (!petData) {
+    const token = req.headers.authorization;
+    const petResponse = await getPetById(medicalRecord.petId, token);
+    if (!petResponse || !petResponse.data) {
       return res.status(404).json({
         success: false,
         message: "Información de la mascota no encontrada",
       });
     }
+
+    const petData = petResponse.data;
 
     // Configurar headers para descarga de PDF
     res.setHeader("Content-Type", "application/pdf");
@@ -593,14 +596,29 @@ export const generateMedicalRecordPDFEndpoint = async (req, res) => {
     );
 
     // Generar el PDF y enviarlo al cliente
-    generateMedicalRecordPDF(medicalRecord.toJSON(), petData, res);
+    try {
+      generateMedicalRecordPDF(medicalRecord.toJSON(), petData, res);
+    } catch (pdfError) {
+      console.error("Error generando el PDF:", pdfError);
+      // Si ya se enviaron los headers, no podemos enviar JSON
+      if (!res.headersSent) {
+        return res.status(500).json({
+          success: false,
+          message: "Error al generar el PDF",
+          error: pdfError.message,
+        });
+      }
+    }
   } catch (error) {
     console.error("Error al generar PDF de registro médico:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Error al generar el PDF del registro médico",
-      error: error.message,
-    });
+    // Solo enviar JSON si no se han enviado headers
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        message: "Error al generar el PDF del registro médico",
+        error: error.message,
+      });
+    }
   }
 };
 
@@ -612,13 +630,16 @@ export const generateMedicalHistoryPDFEndpoint = async (req, res) => {
     const { petId } = req.params;
 
     // Obtener información de la mascota
-    const petData = await getPetById(petId);
-    if (!petData) {
+    const token = req.headers.authorization;
+    const petResponse = await getPetById(petId, token);
+    if (!petResponse || !petResponse.data) {
       return res.status(404).json({
         success: false,
         message: "Mascota no encontrada",
       });
     }
+
+    const petData = petResponse.data;
 
     // Obtener todos los registros médicos
     const medicalRecords = await MedicalRecord.findAll({
@@ -677,13 +698,16 @@ export const generateVaccinationCertificatePDFEndpoint = async (req, res) => {
     const { petId } = req.params;
 
     // Obtener información de la mascota
-    const petData = await getPetById(petId);
-    if (!petData) {
+    const token = req.headers.authorization;
+    const petResponse = await getPetById(petId, token);
+    if (!petResponse || !petResponse.data) {
       return res.status(404).json({
         success: false,
         message: "Mascota no encontrada",
       });
     }
+
+    const petData = petResponse.data;
 
     // Obtener todas las vacunas activas
     const vaccinations = await Vaccination.findAll({
